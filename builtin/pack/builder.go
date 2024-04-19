@@ -11,9 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/buildpacks/pack"
-	"github.com/buildpacks/pack/logging"
-	"github.com/buildpacks/pack/project"
+	"github.com/buildpacks/pack/pkg/logging"
+	packClient "github.com/buildpacks/pack/pkg/client"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/client"
 	"github.com/hashicorp/go-hclog"
@@ -29,6 +28,7 @@ import (
 	"github.com/hashicorp/waypoint/internal/assets"
 	"github.com/hashicorp/waypoint/internal/pkg/epinject"
 	"github.com/hashicorp/waypoint/internal/pkg/epinject/ociregistry"
+  projectTypes "github.com/buildpacks/pack/pkg/project/types"
 )
 
 const (
@@ -373,9 +373,9 @@ func (b *Builder) Build(
 	build := sg.Add("Building image")
 	defer build.Abort()
 
-	client, err := pack.NewClient(
-		pack.WithLogger(logging.New(build.TermOutput())),
-		pack.WithDockerClient(dockerClient),
+	client, err := packClient.NewClient(
+		packClient.WithLogger(logging.NewSimpleLogger(build.TermOutput())),
+		packClient.WithDockerClient(dockerClient),
 	)
 	if err != nil {
 		return nil, err
@@ -383,14 +383,14 @@ func (b *Builder) Build(
 
 	step.Done()
 
-	bo := pack.BuildOptions{
+	bo := packClient.BuildOptions{
 		Image:      src.App,
 		Builder:    builder,
 		AppPath:    src.Path,
 		Env:        b.config.StaticEnvVars,
 		Buildpacks: b.config.Buildpacks,
-		ProjectDescriptor: project.Descriptor{
-			Build: project.Build{
+		ProjectDescriptor: projectTypes.Descriptor{
+			Build: projectTypes.Build{
 				Exclude: b.config.Ignore,
 			},
 		},
